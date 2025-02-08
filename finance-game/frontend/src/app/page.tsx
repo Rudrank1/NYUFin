@@ -785,7 +785,7 @@ export default function FinanceGame() {
 
   const [currentRound, setCurrentRound] = useState(1);
   const [gameHistory, setGameHistory] = useState<
-    { round: number; capital: number }[]
+    { round: number; capital: number; description?: string; choice?: string; result?: string }[]
   >([]);
 
   const [userInputCapital, setUserInputCapital] = useState("");
@@ -804,7 +804,14 @@ export default function FinanceGame() {
     setError("");
   };
 
+  const [showResult, setShowResult] = useState(false);
+const [currentResult, setCurrentResult] = useState<{
+  text: string;
+  newCapital: number;
+} | null>(null);
+
   const handleChoice = (choice: Option) => {
+    const prevCapital = capital;
     let newCapital = capital;
 
     // Add the bonus first
@@ -823,10 +830,19 @@ export default function FinanceGame() {
     // // Ensure capital doesn't go below 0
     // newCapital = Math.max(newCapital, 0);
 
-    setGameHistory((prevHistory) => [
-      ...prevHistory,
-      { round: currentRound + 1, capital: newCapital },
-    ]);
+    // Update game history
+  setGameHistory([...gameHistory, { 
+    round: currentRound, 
+    capital: newCapital,
+    description: scenarios[currentScenarioIndex].description,
+    choice: choice.text,
+    result: choice.outcome.text
+  }]);
+
+  setCurrentResult({
+    text: choice.outcome.text,
+    newCapital: newCapital
+  });
 
     setCapital(newCapital);
     setCurrentRound((prevRound) => prevRound + 1);
@@ -835,6 +851,10 @@ export default function FinanceGame() {
       setGameOver(true);
     } else {
       setCurrentScenarioIndex((prev) => (prev + 1) % scenarios.length);
+    }
+
+    if (currentRound >= 20) {
+      setGameOver(true);
     }
   };
 
@@ -846,10 +866,24 @@ export default function FinanceGame() {
     setGameOver(false);
   };
 
-  if (gameOver) {
-    return (
-      <div className="min-h-screen bg-gray-100 p-8">
-        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+  // New continueGame function
+const continueGame = () => {
+  setCapital(currentResult?.newCapital || 0);
+  setCurrentRound(prev => prev + 1);
+  setShowResult(false);
+  
+  if (currentScenarioIndex + 1 >= scenarios.length) {
+    setGameOver(true);
+  } else {
+    setCurrentScenarioIndex(prev => prev + 1);
+  }
+};
+
+return (
+  <div className="min-h-screen bg-gray-100 p-8">
+    <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+      {gameOver ? (
+        <div>
           <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
           <p className="text-lg mb-4 text-black">
             Final Capital: ${capital.toFixed(2)}
@@ -870,7 +904,10 @@ export default function FinanceGame() {
                   key={index}
                   className="bg-gray-50 p-3 rounded-md text-black"
                 >
-                  Round {entry.round}: ${entry.capital.toFixed(2)}
+                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
+                  <p className="text-sm">Scenario: {entry.description}</p>
+                  <p className="text-sm">Choice: {entry.choice}</p>
+                  <p className="text-sm">Result: {entry.result}</p>
                 </li>
               ))}
             </ul>
@@ -880,82 +917,124 @@ export default function FinanceGame() {
             />
           </div>
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-        {capital === 0 ? (
-          <div className="space-y-4">
-            <h1 className="text-3xl font-bold text-center text-blue-600 mb-4">
-              Financial Literacy Challenge
-            </h1>
+      ) : capital === 0 ? (
+        <div className="space-y-4">
+          <h1 className="text-3xl font-bold text-center text-blue-600 mb-4">
+            Financial Literacy Challenge
+          </h1>
+          <button
+            onClick={() => startGame(1000)}
+            className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
+          >
+            Start with $1000
+          </button>
+          <button
+            onClick={() => startGame(500)}
+            className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
+          >
+            Start with $500 (Hard Mode)
+          </button>
+          <form onSubmit={handleStart} className="space-y-4">
+            <div>
+              <label className="block text-gray-700 mb-2">
+                Enter Starting Capital ($):
+              </label>
+              <input
+                type="number"
+                value={userInputCapital}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                  setUserInputCapital(value);
+                }}
+                className="w-full p-2 border rounded-md"
+                placeholder="Enter custom amount"
+                min="1"
+                step="1"
+              />
+              {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+            </div>
             <button
-              onClick={() => startGame(1000)}
-              className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
+              type="submit"
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
             >
-              Start with $1000
+              Start with Custom Amount
             </button>
-            <button
-              onClick={() => startGame(500)}
-              className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
-            >
-              Start with $500 (Hard Mode)
-            </button>
-            <form onSubmit={handleStart} className="space-y-4">
-              <div>
-                <label className="block text-gray-700 mb-2">
-                  Enter Starting Capital ($):
-                </label>
-                <input
-                  type="number"
-                  value={userInputCapital}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/[^0-9.]/g, "");
-                    setUserInputCapital(value);
-                  }}
-                  className="w-full p-2 border rounded-md"
-                  placeholder="Enter custom amount"
-                  min="1"
-                  step="1"
-                />
-                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-              >
-                Start with Custom Amount
-              </button>
-            </form>
+          </form>
+        </div>
+      ) : showResult ? (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-center mb-4">Round Result</h2>
+          <p className="text-lg text-black">{currentResult?.text}</p>
+          <p className="text-lg text-black">
+            New Capital: ${currentResult?.newCapital.toFixed(2)}
+          </p>
+          <button
+            onClick={continueGame}
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
+            Continue to Next Round
+          </button>
+          <div className="mt-6">
+            <h3 className="text-xl font-semibold mb-2 text-black">
+              Game History
+            </h3>
+            <ul className="space-y-2">
+              {gameHistory.map((entry, index) => (
+                <li
+                  key={index}
+                  className="bg-gray-50 p-3 rounded-md text-black"
+                >
+                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
+                  <p className="text-sm">Scenario: {entry.description}</p>
+                  <p className="text-sm">Choice: {entry.choice}</p>
+                  <p className="text-sm">Result: {entry.result}</p>
+                </li>
+              ))}
+            </ul>
           </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="bg-blue-50 p-4 rounded-md">
-              <h2 className="text-xl font-semibold mb-4 text-black">
-                Current Capital: ${capital.toFixed(2)}
-              </h2>
-              <p className="text-lg mb-4 text-black">
-                {scenarios[currentScenarioIndex].description}
-              </p>
-              <div className="space-y-3">
-                {scenarios[currentScenarioIndex].options.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => handleChoice(option)}
-                    className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors"
-                  >
-                    {option.text}
-                  </button>
-                ))}
-              </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="bg-blue-50 p-4 rounded-md">
+            <h2 className="text-xl font-semibold mb-4 text-black">
+              Current Capital: ${capital.toFixed(2)}
+            </h2>
+            <p className="text-lg mb-4 text-black">
+              {scenarios[currentScenarioIndex].description}
+            </p>
+            <div className="space-y-3">
+              {scenarios[currentScenarioIndex].options.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => handleChoice(option)}
+                  className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  {option.text}
+                </button>
+              ))}
             </div>
           </div>
-        )}
-      </div>
+          <div className="mt-6">
+            <h3 className="text-xl font-semibold mb-2 text-black">
+              Game History
+            </h3>
+            <ul className="space-y-2">
+              {gameHistory.map((entry, index) => (
+                <li
+                  key={index}
+                  className="bg-gray-50 p-3 rounded-md text-black"
+                >
+                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
+                  <p className="text-sm">Scenario: {entry.description}</p>
+                  <p className="text-sm">Choice: {entry.choice}</p>
+                  <p className="text-sm">Result: {entry.result}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
+  </div>
   );
 }
