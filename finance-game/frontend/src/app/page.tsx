@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import FinancialGraph from "./financeChart";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 type Outcome = {
   text: string;
@@ -780,18 +781,116 @@ const scenarios: Scenario[] = [
 export default function FinanceGame() {
   const [capital, setCapital] = useState(0);
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
-  //const [gameHistory, setGameHistory] = useState<string[]>([]);
   const [gameOver, setGameOver] = useState(false);
-
   const [currentRound, setCurrentRound] = useState(1);
   const [gameHistory, setGameHistory] = useState<
-    { round: number; capital: number; description?: string; choice?: string; result?: string }[]
+    {
+      round: number;
+      capital: number;
+      description?: string;
+      choice?: string;
+      result?: string;
+    }[]
   >([]);
-
   const [userInputCapital, setUserInputCapital] = useState("");
   const [error, setError] = useState("");
+  const [showResult, setShowResult] = useState(false);
+  const [currentResult, setCurrentResult] = useState<{
+    text: string;
+    newCapital: number;
+  } | null>(null);
 
-  const handleStart = (e: React.FormEvent) => {
+  // New state: Hold scenarios generated via Gemini API.
+  const [apiScenarios, setApiScenarios] = useState<Scenario[] | null>(null);
+
+  // Helper: If Gemini-generated scenarios are available, use them; otherwise fallback to the static array.
+  //const activeScenarios: Scenario[] = apiScenarios || scenarios;
+
+  ///////////////////////
+  // GEMINI API INTEGRATION
+  ///////////////////////
+
+  // Gemini API Integration using @google/generative-ai library
+  // const generateScenarios = async () => {
+  //   try {
+  //     // Initialize the client with your API key from .env.local
+  //     const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY_HERE";
+  //     const genAI = new GoogleGenerativeAI(geminiApiKey);
+
+  //     // Get the generative model. Ensure "gemini-1.5-flash" is the correct model name.
+  //     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+  //     // Detailed prompt to generate 20 scenario objects as per your requirements.
+  //     const prompt = `Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+  // "id" (number),
+  // "category" (string),
+  // "description" (string),
+  // "options" (array of option objects, where each option has:
+  //   "id" (number),
+  //   "text" (string),
+  //   "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")).
+  // The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
+  // Output only a valid JSON array without any extra text.`;
+
+  //     // Generate content from the model using the prompt
+  //     const result = await model.generateContent(prompt);
+  //     // result.response.text() returns the generated text
+  //     const generatedText = result.response.text();
+
+  //     // Parse the generated text as JSON
+  //     const generatedScenarios = JSON.parse(generatedText);
+
+  //     // Use the generated scenarios as needed (for example, updating state)
+  //     setApiScenarios(generatedScenarios);
+  //   } catch (err) {
+  //     console.error("Error generating scenarios via Gemini:", err);
+  //   }
+  // };
+  const generateScenarios = async () => {
+    try {
+      const geminiApiKey =
+        process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY_HERE";
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `You are a finance expert. Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+"id" (number),
+"category" (string),
+"description" (string),
+"options" (array of option objects, where each option has:
+  "id" (number),
+  "text" (string),
+  "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")). capitalChange must not go above 100, or below -100, as is the number by which the user's capital is going to change as a result of the choice the user picks. Fixed cost is a cost incurred by the user as a result of his choice in an expense question only. Bonus is a random surprise number given only when the user reveives a surprise bonus like a birthday gift. The capital bonus and cost have to be real world relevant. Please do not exaggerate values. Stay within 100k. Stay within real world limits.
+The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
+Output only a valid JSON array without any extra text.`;
+
+      const result = await model.generateContent(prompt);
+      const rawText = result.response.text();
+      console.log("Raw generated text:", rawText);
+
+      // Remove markdown code fences if present
+      let jsonString = rawText.trim();
+      if (jsonString.startsWith("```json")) {
+        jsonString = jsonString.slice(7).trim(); // remove opening ```
+        if (jsonString.endsWith("```")) {
+          jsonString = jsonString.slice(0, -3).trim(); // remove closing ```
+        }
+      } else if (jsonString.startsWith("```")) {
+        jsonString = jsonString.slice(3).trim(); // remove opening ```
+        if (jsonString.endsWith("```")) {
+          jsonString = jsonString.slice(0, -3).trim(); // remove closing ```
+        }
+      }
+
+      // Now parse the clean JSON string
+      const generatedScenarios = JSON.parse(jsonString);
+      setApiScenarios(generatedScenarios);
+    } catch (err) {
+      console.error("Error generating scenarios via Gemini:", err);
+    }
+  };
+
+  const handleScenarioStart = (e: React.FormEvent) => {
     e.preventDefault();
     const startingCapital = parseFloat(userInputCapital);
 
@@ -800,15 +899,9 @@ export default function FinanceGame() {
       return;
     }
 
-    startGame(startingCapital);
+    startScenarioGame(startingCapital);
     setError("");
   };
-
-  const [showResult, setShowResult] = useState(false);
-const [currentResult, setCurrentResult] = useState<{
-  text: string;
-  newCapital: number;
-} | null>(null);
 
   const handleChoice = (choice: Option) => {
     const prevCapital = capital;
@@ -831,18 +924,21 @@ const [currentResult, setCurrentResult] = useState<{
     // newCapital = Math.max(newCapital, 0);
 
     // Update game history
-  setGameHistory([...gameHistory, { 
-    round: currentRound, 
-    capital: newCapital,
-    description: scenarios[currentScenarioIndex].description,
-    choice: choice.text,
-    result: choice.outcome.text
-  }]);
+    setGameHistory([
+      ...gameHistory,
+      {
+        round: currentRound,
+        capital: newCapital,
+        description: apiScenarios![currentScenarioIndex].description,
+        choice: choice.text,
+        result: choice.outcome.text,
+      },
+    ]);
 
-  setCurrentResult({
-    text: choice.outcome.text,
-    newCapital: newCapital
-  });
+    setCurrentResult({
+      text: choice.outcome.text,
+      newCapital: newCapital,
+    });
 
     setCapital(newCapital);
     setCurrentRound((prevRound) => prevRound + 1);
@@ -858,7 +954,7 @@ const [currentResult, setCurrentResult] = useState<{
     }
   };
 
-  const startGame = (initialCapital: number) => {
+  const startScenarioGame = (initialCapital: number) => {
     setCapital(initialCapital);
     setCurrentScenarioIndex(0);
     setGameHistory([{ round: 1, capital: initialCapital }]);
@@ -867,174 +963,207 @@ const [currentResult, setCurrentResult] = useState<{
   };
 
   // New continueGame function
-const continueGame = () => {
-  setCapital(currentResult?.newCapital || 0);
-  setCurrentRound(prev => prev + 1);
-  setShowResult(false);
-  
-  if (currentScenarioIndex + 1 >= scenarios.length) {
-    setGameOver(true);
-  } else {
-    setCurrentScenarioIndex(prev => prev + 1);
-  }
-};
+  const continueGame = () => {
+    setCapital(currentResult?.newCapital || 0);
+    setCurrentRound((prev) => prev + 1);
+    setShowResult(false);
 
-return (
-  <div className="min-h-screen bg-gray-100 p-8">
-    <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-      {gameOver ? (
-        <div>
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
-          <p className="text-lg mb-4 text-black">
-            Final Capital: ${capital.toFixed(2)}
-          </p>
-          <button
-            onClick={() => startGame(1000)}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-          >
-            Play Again
-          </button>
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-2 text-black">
-              Game History
-            </h3>
-            <ul className="space-y-2">
-              {gameHistory.map((entry, index) => (
-                <li
-                  key={index}
-                  className="bg-gray-50 p-3 rounded-md text-black"
-                >
-                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
-                  <p className="text-sm">Scenario: {entry.description}</p>
-                  <p className="text-sm">Choice: {entry.choice}</p>
-                  <p className="text-sm">Result: {entry.result}</p>
-                </li>
-              ))}
-            </ul>
-            <FinancialGraph
-              rounds={gameHistory.map((entry) => entry.round)}
-              capitals={gameHistory.map((entry) => entry.capital)}
-            />
-          </div>
-        </div>
-      ) : capital === 0 ? (
-        <div className="space-y-4">
-          <h1 className="text-3xl font-bold text-center text-blue-600 mb-4">
+    if (currentScenarioIndex + 1 >= apiScenarios!.length) {
+      setGameOver(true);
+    } else {
+      setCurrentScenarioIndex((prev) => prev + 1);
+    }
+  };
+
+  // If apiScenarios hasn't been generated yet, show a waiting/loader screen.
+  if (apiScenarios === null) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-8">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 text-center">
+          <h1 className="text-3xl font-bold text-blue-600 mb-4">
             Financial Literacy Challenge
           </h1>
+          <p className="mb-4">Waiting for Gemini to generate scenarios...</p>
           <button
-            onClick={() => startGame(1000)}
-            className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
+            onClick={generateScenarios}
+            className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700"
           >
-            Start with $1000
+            Generate Scenarios via Gemini
           </button>
-          <button
-            onClick={() => startGame(500)}
-            className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
-          >
-            Start with $500 (Hard Mode)
-          </button>
-          <form onSubmit={handleStart} className="space-y-4">
-            <div>
-              <label className="block text-gray-700 mb-2">
-                Enter Starting Capital ($):
-              </label>
-              <input
-                type="number"
-                value={userInputCapital}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/[^0-9.]/g, "");
-                  setUserInputCapital(value);
-                }}
-                className="w-full p-2 border rounded-md"
-                placeholder="Enter custom amount"
-                min="1"
-                step="1"
-              />
-              {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
-            </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        {gameOver ? (
+          <div>
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
+            <p className="text-lg mb-4 text-black">
+              Final Capital: ${capital.toFixed(2)}
+            </p>
             <button
-              type="submit"
+              onClick={() => startScenarioGame(1000)}
               className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
             >
-              Start with Custom Amount
+              Play Again
             </button>
-          </form>
-        </div>
-      ) : showResult ? (
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-center mb-4">Round Result</h2>
-          <p className="text-lg text-black">{currentResult?.text}</p>
-          <p className="text-lg text-black">
-            New Capital: ${currentResult?.newCapital.toFixed(2)}
-          </p>
-          <button
-            onClick={continueGame}
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-          >
-            Continue to Next Round
-          </button>
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-2 text-black">
-              Game History
-            </h3>
-            <ul className="space-y-2">
-              {gameHistory.map((entry, index) => (
-                <li
-                  key={index}
-                  className="bg-gray-50 p-3 rounded-md text-black"
-                >
-                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
-                  <p className="text-sm">Scenario: {entry.description}</p>
-                  <p className="text-sm">Choice: {entry.choice}</p>
-                  <p className="text-sm">Result: {entry.result}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="bg-blue-50 p-4 rounded-md">
-            <h2 className="text-xl font-semibold mb-4 text-black">
-              Current Capital: ${capital.toFixed(2)}
-            </h2>
-            <p className="text-lg mb-4 text-black">
-              {scenarios[currentScenarioIndex].description}
-            </p>
-            <div className="space-y-3">
-              {scenarios[currentScenarioIndex].options.map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => handleChoice(option)}
-                  className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors"
-                >
-                  {option.text}
-                </button>
-              ))}
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+              <FinancialGraph
+                rounds={gameHistory.map((entry) => entry.round)}
+                capitals={gameHistory.map((entry) => entry.capital)}
+              />
             </div>
           </div>
-          <div className="mt-6">
-            <h3 className="text-xl font-semibold mb-2 text-black">
-              Game History
-            </h3>
-            <ul className="space-y-2">
-              {gameHistory.map((entry, index) => (
-                <li
-                  key={index}
-                  className="bg-gray-50 p-3 rounded-md text-black"
-                >
-                  <p>Round {entry.round}: ${entry.capital.toFixed(2)}</p>
-                  <p className="text-sm">Scenario: {entry.description}</p>
-                  <p className="text-sm">Choice: {entry.choice}</p>
-                  <p className="text-sm">Result: {entry.result}</p>
-                </li>
-              ))}
-            </ul>
+        ) : capital === 0 ? (
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-center text-blue-600 mb-4">
+              Financial Literacy Challenge
+            </h1>
+            <button
+              onClick={() => startScenarioGame(1000)}
+              className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
+            >
+              Start with $1000
+            </button>
+            <button
+              onClick={() => startScenarioGame(500)}
+              className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
+            >
+              Start with $500 (Hard Mode)
+            </button>
+            <form onSubmit={handleScenarioStart} className="space-y-4">
+              <div>
+                <label className="block text-black mb-2">
+                  Enter Starting Capital ($):
+                </label>
+                <input
+                  type="number"
+                  value={userInputCapital}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, "");
+                    setUserInputCapital(value);
+                  }}
+                  className="w-full p-2 border rounded-md text-black"
+                  placeholder="Enter custom amount"
+                  min="1"
+                  step="1"
+                />
+                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              >
+                Start with Custom Amount
+              </button>
+            </form>
+            {/* Button to trigger Gemini API scenario generation */}
+            <button
+              onClick={generateScenarios}
+              className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 mt-4"
+            >
+              Generate Scenarios
+            </button>
           </div>
-        </div>
-      )}
+        ) : showResult ? (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-center mb-4">Round Result</h2>
+            <p className="text-lg text-black">{currentResult?.text}</p>
+            <p className="text-lg text-black">
+              New Capital: ${currentResult?.newCapital.toFixed(2)}
+            </p>
+            <button
+              onClick={continueGame}
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+            >
+              Continue to Next Round
+            </button>
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="bg-blue-50 p-4 rounded-md">
+              <h2 className="text-xl font-semibold mb-4 text-black">
+                Current Capital: ${capital.toFixed(2)}
+              </h2>
+              <p className="text-lg mb-4 text-black">
+                {apiScenarios[currentScenarioIndex].description}
+              </p>
+              <div className="space-y-3">
+                {apiScenarios[currentScenarioIndex].options.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleChoice(option)}
+                    className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors"
+                  >
+                    {option.text}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
   );
 }
