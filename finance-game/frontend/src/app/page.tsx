@@ -1,410 +1,1166 @@
-// import Image from "next/image";
-
-// export default function Home() {
-//   return (
-//     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-//       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-//         <Image
-//           className="dark:invert"
-//           src="/next.svg"
-//           alt="Next.js logo"
-//           width={180}
-//           height={38}
-//           priority
-//         />
-//         <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-//           <li className="mb-2">
-//             Get started by editing{" "}
-//             <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-//               src/app/page.tsx
-//             </code>
-//             .
-//           </li>
-//           <li>Save and see your changes instantly.</li>
-//         </ol>
-
-//         <div className="flex gap-4 items-center flex-col sm:flex-row">
-//           <a
-//             className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-//             href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             <Image
-//               className="dark:invert"
-//               src="/vercel.svg"
-//               alt="Vercel logomark"
-//               width={20}
-//               height={20}
-//             />
-//             Deploy now
-//           </a>
-//           <a
-//             className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-//             href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//             target="_blank"
-//             rel="noopener noreferrer"
-//           >
-//             Read our docs
-//           </a>
-//         </div>
-//       </main>
-//       <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-//         <a
-//           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-//           href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           <Image
-//             aria-hidden
-//             src="/file.svg"
-//             alt="File icon"
-//             width={16}
-//             height={16}
-//           />
-//           Learn
-//         </a>
-//         <a
-//           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-//           href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           <Image
-//             aria-hidden
-//             src="/window.svg"
-//             alt="Window icon"
-//             width={16}
-//             height={16}
-//           />
-//           Examples
-//         </a>
-//         <a
-//           className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-//           href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-//           target="_blank"
-//           rel="noopener noreferrer"
-//         >
-//           <Image
-//             aria-hidden
-//             src="/globe.svg"
-//             alt="Globe icon"
-//             width={16}
-//             height={16}
-//           />
-//           Go to nextjs.org →
-//         </a>
-//       </footer>
-//     </div>
-//   );
-// }
-
-// "use client";
-
-
-// import { useEffect, useState } from 'react';
-// import axios from 'axios';
-
-// export default function Home() {
-//   const [message, setMessage] = useState('');
-
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       try {
-//         const response = await axios.get('http://localhost:5002/api/test');
-//         setMessage(response.data.message);
-//       } catch (error) {
-//         console.error('Connection error:', error);
-//         setMessage('Backend connection failed');
-//       }
-//     };
-//     fetchData();
-//   }, []);
-
-//   return (
-//     <div style={{ textAlign: 'center', padding: '2rem' }}>
-//       <h1>Financial Literacy Game</h1>
-//       <p>Backend status: {message}</p>
-//     </div>
-//   );
-// }
-
-// frontend/src/app/page.tsx
 "use client";
 
-import { useState, useEffect, FormEvent } from 'react';
-import axios from 'axios';
+import { useState, FormEvent } from "react";
+import FinancialGraph from "./financeChart";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Type definitions
-interface Outcome {
+type Outcome = {
   text: string;
   capitalChange: number;
-}
+  fixedCost?: number;
+  bonus?: number;
+};
 
-interface Option {
+type Option = {
   id: number;
   text: string;
   outcome: Outcome;
-}
+};
 
-interface Scenario {
+type Scenario = {
   id: number;
+  category: string;
   description: string;
   options: Option[];
-}
+};
 
-interface GameHistoryEntry {
-  scenario: string;
-  choice: string;
-  result: string;
-}
-
-// Configure Axios for backend communication
-const api = axios.create({
-  baseURL: 'http://localhost:5002/api',
-});
+const scenarios: Scenario[] = [
+  {
+    id: 1,
+    category: "Investing",
+    description: "You have $5,000 to invest. Choose your strategy:",
+    options: [
+      {
+        id: 1,
+        text: "Invest in a low-cost S&P 500 index fund",
+        outcome: {
+          text: "Your investment grew by 7% over the year.",
+          capitalChange: 0.07,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Buy individual stocks of three tech companies",
+        outcome: {
+          text: "Your tech stocks had mixed performance, resulting in a 5% gain.",
+          capitalChange: 0.05,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Invest in a balanced mutual fund (60% stocks, 40% bonds)",
+        outcome: {
+          text: "The balanced fund provided steady growth of 6%.",
+          capitalChange: 0.06,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 2,
+    category: "Investing",
+    description:
+      "Your employer offers a 401(k) match. How much do you contribute?",
+    options: [
+      {
+        id: 1,
+        text: "Contribute just enough to get the full employer match",
+        outcome: {
+          text: "You contributed 6% and your employer matched 3%, total 9% saved.",
+          capitalChange: 0.09,
+          fixedCost: -1800,
+          bonus: 900,
+        },
+      },
+      {
+        id: 2,
+        text: "Maximize your annual contribution limit",
+        outcome: {
+          text: "You maxed out at $19,500, significantly reducing your taxable income.",
+          capitalChange: 0,
+          fixedCost: -19500,
+          bonus: 5850,
+        },
+      },
+      {
+        id: 3,
+        text: "Don't participate and invest independently",
+        outcome: {
+          text: "You missed out on free money but have more to invest now.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 3,
+    category: "Investing",
+    description: "You've inherited $10,000. How do you diversify?",
+    options: [
+      {
+        id: 1,
+        text: "70% in total stock market ETF, 30% in bond ETF",
+        outcome: {
+          text: "Your balanced portfolio grew by 6.5% over the year.",
+          capitalChange: 0.065,
+          fixedCost: -10000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "50% in dividend-paying stocks, 50% in REITs",
+        outcome: {
+          text: "You earned a 4% dividend yield and 3% capital appreciation.",
+          capitalChange: 0.07,
+          fixedCost: -10000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "100% in a target-date retirement fund",
+        outcome: {
+          text: "The fund adjusted its allocation and returned 5.5% this year.",
+          capitalChange: 0.055,
+          fixedCost: -10000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 4,
+    category: "Investing",
+    description: "The stock market has dropped 20%. What's your move?",
+    options: [
+      {
+        id: 1,
+        text: "Buy more shares at the lower price",
+        outcome: {
+          text: "You invested an extra $2,000 and the market rebounded 10%.",
+          capitalChange: 0.1,
+          fixedCost: -2000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Sell to prevent further losses",
+        outcome: {
+          text: "You sold at a 20% loss, missing the subsequent 15% recovery.",
+          capitalChange: -0.2,
+          fixedCost: 0,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Hold your current positions",
+        outcome: {
+          text: "You weathered the storm and the market recovered 15%.",
+          capitalChange: -0.05,
+          fixedCost: 0,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 5,
+    category: "Investing",
+    description:
+      "You're interested in socially responsible investing. Choose an option:",
+    options: [
+      {
+        id: 1,
+        text: "ESG (Environmental, Social, Governance) focused ETF",
+        outcome: {
+          text: "The ESG ETF returned 6% while aligning with your values.",
+          capitalChange: 0.06,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Green energy company stocks",
+        outcome: {
+          text: "Your green energy picks were volatile but ended up 8%.",
+          capitalChange: 0.08,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Sustainable bond fund",
+        outcome: {
+          text: "The bond fund provided a steady 4% return.",
+          capitalChange: 0.04,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 6,
+    category: "Budgeting",
+    description: "Your monthly income is $4,000. How do you budget?",
+    options: [
+      {
+        id: 1,
+        text: "50/30/20 rule (50% needs, 30% wants, 20% savings)",
+        outcome: {
+          text: "You saved $800 this month and maintained a balanced lifestyle.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 800,
+        },
+      },
+      {
+        id: 2,
+        text: "70/20/10 rule (70% expenses, 20% savings, 10% debt)",
+        outcome: {
+          text: "You saved $800 and paid off $400 in debt.",
+          capitalChange: 0,
+          fixedCost: -400,
+          bonus: 800,
+        },
+      },
+      {
+        id: 3,
+        text: "Zero-based budgeting (every dollar has a job)",
+        outcome: {
+          text: "You optimized spending and managed to save $1,000 this month.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 1000,
+        },
+      },
+    ],
+  },
+  {
+    id: 7,
+    category: "Budgeting",
+    description: "You got a 5% raise. What do you do with the extra money?",
+    options: [
+      {
+        id: 1,
+        text: "Increase your 401(k) contribution",
+        outcome: {
+          text: "You boosted your retirement savings by $2,400 annually.",
+          capitalChange: 0,
+          fixedCost: -2400,
+          bonus: 600,
+        },
+      },
+      {
+        id: 2,
+        text: "Start a side hustle investment fund",
+        outcome: {
+          text: "You invested $2,400 in starting a small business.",
+          capitalChange: 0,
+          fixedCost: -2400,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Upgrade your lifestyle",
+        outcome: {
+          text: "You enjoyed some luxuries but saved nothing extra.",
+          capitalChange: 0,
+          fixedCost: -2400,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 8,
+    category: "Budgeting",
+    description: "Your car needs $2,000 in repairs. How do you handle it?",
+    options: [
+      {
+        id: 1,
+        text: "Use your emergency fund",
+        outcome: {
+          text: "You paid for repairs without incurring debt.",
+          capitalChange: 0,
+          fixedCost: -2000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Put it on a credit card",
+        outcome: {
+          text: "You'll pay an extra $360 in interest over a year if not paid off quickly.",
+          capitalChange: 0,
+          fixedCost: -2360,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Take out a personal loan",
+        outcome: {
+          text: "You secured a loan at 8% APR, paying $160 in interest over a year.",
+          capitalChange: 0,
+          fixedCost: -2160,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 9,
+    category: "Debt Management",
+    description:
+      "You have multiple debts. Which repayment strategy do you choose?",
+    options: [
+      {
+        id: 1,
+        text: "Debt avalanche (highest interest rate first)",
+        outcome: {
+          text: "You paid less in interest overall but took longer to see progress.",
+          capitalChange: 0,
+          fixedCost: -5000,
+          bonus: 500,
+        },
+      },
+      {
+        id: 2,
+        text: "Debt snowball (smallest balance first)",
+        outcome: {
+          text: "You paid off two small debts, boosting your motivation.",
+          capitalChange: 0,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Consolidate all debts with a personal loan",
+        outcome: {
+          text: "You simplified payments and lowered your overall interest rate.",
+          capitalChange: 0,
+          fixedCost: -5000,
+          bonus: 300,
+        },
+      },
+    ],
+  },
+  {
+    id: 10,
+    category: "Debt Management",
+    description:
+      "You have $5,000 in credit card debt at 18% APR. What's your plan?",
+    options: [
+      {
+        id: 1,
+        text: "Transfer to a 0% APR balance transfer card",
+        outcome: {
+          text: "You saved on interest but paid a 3% transfer fee.",
+          capitalChange: 0,
+          fixedCost: -150,
+          bonus: 900,
+        },
+      },
+      {
+        id: 2,
+        text: "Take out a personal loan at 10% APR to pay it off",
+        outcome: {
+          text: "You reduced your interest rate but still owe the full amount.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 400,
+        },
+      },
+      {
+        id: 3,
+        text: "Aggressively pay down using the debt avalanche method",
+        outcome: {
+          text: "You paid off $2,000 this year and saved on future interest.",
+          capitalChange: 0,
+          fixedCost: -2000,
+          bonus: 600,
+        },
+      },
+    ],
+  },
+  {
+    id: 11,
+    category: "Debt Management",
+    description:
+      "You're approved for a $250,000 mortgage. How much do you borrow?",
+    options: [
+      {
+        id: 1,
+        text: "The full $250,000 to get your dream home",
+        outcome: {
+          text: "You got a great house but have a tight monthly budget.",
+          capitalChange: 0,
+          fixedCost: -250000,
+          bonus: 250000,
+        },
+      },
+      {
+        id: 2,
+        text: "$200,000 to have a lower monthly payment",
+        outcome: {
+          text: "You found a good home and have more financial flexibility.",
+          capitalChange: 0,
+          fixedCost: -200000,
+          bonus: 200000,
+        },
+      },
+      {
+        id: 3,
+        text: "$150,000 and buy a fixer-upper",
+        outcome: {
+          text: "You have a project house and $100,000 for renovations and savings.",
+          capitalChange: 0,
+          fixedCost: -150000,
+          bonus: 150000,
+        },
+      },
+    ],
+  },
+  {
+    id: 12,
+    category: "Retirement Planning",
+    description:
+      "You're 25 and starting retirement planning. Where do you begin?",
+    options: [
+      {
+        id: 1,
+        text: "Open a Roth IRA and max it out annually",
+        outcome: {
+          text: "You maxed out your Roth IRA, investing $6,000 this year.",
+          capitalChange: 0,
+          fixedCost: -6000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Focus on maximizing your 401(k) contribution",
+        outcome: {
+          text: "You contributed $19,500 to your 401(k), reducing your taxable income.",
+          capitalChange: 0,
+          fixedCost: -19500,
+          bonus: 5850,
+        },
+      },
+      {
+        id: 3,
+        text: "Split contributions between Roth IRA and 401(k)",
+        outcome: {
+          text: "You contributed $3,000 to Roth IRA and $10,000 to 401(k).",
+          capitalChange: 0,
+          fixedCost: -13000,
+          bonus: 3000,
+        },
+      },
+    ],
+  },
+  {
+    id: 13,
+    category: "Retirement Planning",
+    description:
+      "You're 45 with $100,000 saved for retirement. What's your next move?",
+    options: [
+      {
+        id: 1,
+        text: "Increase contributions to catch up",
+        outcome: {
+          text: "You maxed out 401(k) and IRA, adding $25,500 this year.",
+          capitalChange: 0,
+          fixedCost: -25500,
+          bonus: 7650,
+        },
+      },
+      {
+        id: 2,
+        text: "Adjust to a more aggressive investment mix",
+        outcome: {
+          text: "Your portfolio grew by 8% but with higher volatility.",
+          capitalChange: 0.08,
+          fixedCost: 0,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Consult a financial advisor for a comprehensive plan",
+        outcome: {
+          text: "You paid $2,000 for a solid plan that should boost savings by 20% over 5 years.",
+          capitalChange: 0,
+          fixedCost: -2000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 14,
+    category: "Retirement Planning",
+    description:
+      "You're considering early retirement. Which strategy do you pursue?",
+    options: [
+      {
+        id: 1,
+        text: "FIRE (Financial Independence, Retire Early) with aggressive saving",
+        outcome: {
+          text: "You saved 70% of your income, accelerating your retirement timeline.",
+          capitalChange: 0,
+          fixedCost: -50000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Coast FIRE (save aggressively now, then let investments grow)",
+        outcome: {
+          text: "You front-loaded your savings, planning to coast to traditional retirement age.",
+          capitalChange: 0,
+          fixedCost: -30000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Barista FIRE (semi-retire with part-time work for benefits)",
+        outcome: {
+          text: "You prepared for part-time work, balancing savings with more free time.",
+          capitalChange: 0,
+          fixedCost: -20000,
+          bonus: 15000,
+        },
+      },
+    ],
+  },
+  {
+    id: 15,
+    category: "Retirement Planning",
+    description:
+      "You're 55 and want to access retirement funds. What's your option?",
+    options: [
+      {
+        id: 1,
+        text: "Use Rule 72(t) for penalty-free withdrawals from IRA",
+        outcome: {
+          text: "You started fixed withdrawals, avoiding penalties but limiting flexibility.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 15000,
+        },
+      },
+      {
+        id: 2,
+        text: "Wait until 59½ to avoid early withdrawal penalties",
+        outcome: {
+          text: "You avoided penalties but had to find alternative income for 4.5 years.",
+          capitalChange: 0,
+          fixedCost: -20000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Take a 401(k) loan for immediate needs",
+        outcome: {
+          text: "You borrowed $50,000 from your 401(k), to be repaid with interest.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 50000,
+        },
+      },
+    ],
+  },
+  {
+    id: 16,
+    category: "Emergency Fund",
+    description: "You're starting an emergency fund. How much do you aim for?",
+    options: [
+      {
+        id: 1,
+        text: "3 months of expenses in a high-yield savings account",
+        outcome: {
+          text: "You saved $6,000 and earned 1% interest over the year.",
+          capitalChange: 0.01,
+          fixedCost: -6000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "6 months of expenses split between savings and a money market account",
+        outcome: {
+          text: "You saved $12,000 and earned an average of 1.5% interest.",
+          capitalChange: 0.015,
+          fixedCost: -12000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "1 year of expenses in a combination of cash and short-term bonds",
+        outcome: {
+          text: "You saved $24,000 and earned an average of 2% return.",
+          capitalChange: 0.02,
+          fixedCost: -24000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+  {
+    id: 17,
+    category: "Emergency Fund",
+    description: "You've reached your emergency fund goal. What's next?",
+    options: [
+      {
+        id: 1,
+        text: "Keep building it in anticipation of larger future expenses",
+        outcome: {
+          text: "You added another $2,000 to your emergency fund.",
+          capitalChange: 0,
+          fixedCost: -2000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Start investing the overflow in index funds",
+        outcome: {
+          text: "You invested $2,000 in a total market index fund, which grew 7%.",
+          capitalChange: 0.07,
+          fixedCost: -2000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Use the extra to pay down high-interest debt",
+        outcome: {
+          text: "You paid off $2,000 of credit card debt, saving on 18% APR.",
+          capitalChange: 0,
+          fixedCost: -2000,
+          bonus: 360,
+        },
+      },
+    ],
+  },
+  {
+    id: 18,
+    category: "Emergency Fund",
+    description: "You need to use your emergency fund. How do you rebuild it?",
+    options: [
+      {
+        id: 1,
+        text: "Temporarily reduce 401(k) contributions to basic match",
+        outcome: {
+          text: "You rebuilt your fund in 6 months but missed some retirement savings.",
+          capitalChange: 0,
+          fixedCost: -3000,
+          bonus: 3000,
+        },
+      },
+      {
+        id: 2,
+        text: "Take on a side gig dedicated to refilling the fund",
+        outcome: {
+          text: "You earned an extra $4,000 over 4 months to rebuild your fund.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 4000,
+        },
+      },
+      {
+        id: 3,
+        text: "Sell some non-retirement investments",
+        outcome: {
+          text: "You sold $3,000 of stocks, incurring some capital gains tax.",
+          capitalChange: 0,
+          fixedCost: -450,
+          bonus: 3000,
+        },
+      },
+    ],
+  },
+  {
+    id: 19,
+    category: "Emergency Fund",
+    description:
+      "Unexpected job loss occurs. How do you manage your emergency fund?",
+    options: [
+      {
+        id: 1,
+        text: "Immediately cut all non-essential spending",
+        outcome: {
+          text: "You reduced monthly expenses by 30%, extending your fund's duration.",
+          capitalChange: 0,
+          fixedCost: -1000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Use it sparingly while aggressively job hunting",
+        outcome: {
+          text: "You found a new job in 2 months, using only $4,000 of your fund.",
+          capitalChange: 0,
+          fixedCost: -4000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Withdraw from Roth IRA contributions to extend runway",
+        outcome: {
+          text: "You withdrew $5,000 from Roth IRA contributions without penalty.",
+          capitalChange: 0,
+          fixedCost: 0,
+          bonus: 5000,
+        },
+      },
+    ],
+  },
+  {
+    id: 20,
+    category: "Emergency Fund",
+    description:
+      "You have a $5,000 medical bill not covered by insurance. Your options:",
+    options: [
+      {
+        id: 1,
+        text: "Pay from your emergency fund",
+        outcome: {
+          text: "You covered the bill without incurring debt but depleted your fund.",
+          capitalChange: 0,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+      {
+        id: 2,
+        text: "Negotiate a payment plan with the hospital",
+        outcome: {
+          text: "You set up a 12-month plan, paying $425/month with 2% interest.",
+          capitalChange: 0,
+          fixedCost: -5100,
+          bonus: 0,
+        },
+      },
+      {
+        id: 3,
+        text: "Use a medical credit card with 0% intro APR",
+        outcome: {
+          text: "You avoided immediate interest but must pay off $5,000 within 12 months.",
+          capitalChange: 0,
+          fixedCost: -5000,
+          bonus: 0,
+        },
+      },
+    ],
+  },
+];
 
 export default function FinanceGame() {
-  const [capital, setCapital] = useState<number>(0);
-  const [scenario, setScenario] = useState<Scenario | null>(null);
-  const [result, setResult] = useState<Outcome | null>(null);
-  const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-
-  // Hardcoded scenarios (replace with backend calls if needed)
-  const scenarios: Scenario[] = [
+  const [capital, setCapital] = useState(0);
+  const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [gameHistory, setGameHistory] = useState<
     {
-      id: 1,
-      description: "You received an unexpected $1000 bonus. What will you do?",
-      options: [
-        { 
-          id: 1, 
-          text: "Invest in stock market", 
-          outcome: { 
-            text: "Stocks gained 15%!", 
-            capitalChange: 0.15 
-          } 
-        },
-        { 
-          id: 2, 
-          text: "Put in savings account", 
-          outcome: { 
-            text: "Earned 2% interest", 
-            capitalChange: 0.02 
-          } 
-        },
-        { 
-          id: 3, 
-          text: "Buy new electronics", 
-          outcome: { 
-            text: "Enjoyment but no returns", 
-            capitalChange: -0.3 
-          } 
-        }
-      ]
-    },
-    {
-      id: 2,
-      description: "Your car needs $500 repairs. How do you handle it?",
-      options: [
-        { 
-          id: 1, 
-          text: "Use emergency fund", 
-          outcome: { 
-            text: "Smart financial move!", 
-            capitalChange: -0.05 
-          } 
-        },
-        { 
-          id: 2, 
-          text: "Put on credit card", 
-          outcome: { 
-            text: "Accrued 18% interest", 
-            capitalChange: -0.18 
-          } 
-        },
-        { 
-          id: 3, 
-          text: "Ignore the problem", 
-          outcome: { 
-            text: "Costlier repairs later", 
-            capitalChange: -0.4 
-          } 
-        }
-      ]
-    }
-  ];
+      round: number;
+      capital: number;
+      description?: string;
+      choice?: string;
+      result?: string;
+    }[]
+  >([]);
+  const [userInputCapital, setUserInputCapital] = useState("");
+  const [error, setError] = useState("");
+  const [showResult, setShowResult] = useState(false);
+  const [currentResult, setCurrentResult] = useState<{
+    text: string;
+    newCapital: number;
+  } | null>(null);
 
-  const startGame = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const initialCapital = parseFloat(capital.toString());
-      if (isNaN(initialCapital)) {
-        throw new Error("Invalid capital amount");
-      }
-      
-      setCapital(initialCapital);
-      setGameHistory([]);
-      setResult(null);
-      setScenario(scenarios[0]);
-    } catch (error) {
-      console.error('Error starting game:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // New state: Hold scenarios generated via Gemini API.
+  const [apiScenarios, setApiScenarios] = useState<Scenario[] | null>(null);
 
-  // const handleChoice = async (choiceId: number) => {
-  //   setLoading(true);
+  // Helper: If Gemini-generated scenarios are available, use them; otherwise fallback to the static array.
+  //const activeScenarios: Scenario[] = apiScenarios || scenarios;
+
+  ///////////////////////
+  // GEMINI API INTEGRATION
+  ///////////////////////
+
+  // Gemini API Integration using @google/generative-ai library
+  // const generateScenarios = async () => {
   //   try {
-  //     if (!scenario) throw new Error("No active scenario");
-      
-  //     const selectedOption = scenario.options.find(opt => opt.id === choiceId);
-  //     if (!selectedOption) throw new Error("Invalid choice");
+  //     // Initialize the client with your API key from .env.local
+  //     const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY_HERE";
+  //     const genAI = new GoogleGenerativeAI(geminiApiKey);
 
-  //     const newCapital = capital + (capital * selectedOption.outcome.capitalChange);
-      
-  //     setCapital(newCapital);
-  //     setResult(selectedOption.outcome);
-      
-  //     setGameHistory(prev => [...prev, {
-  //       scenario: scenario.description,
-  //       choice: selectedOption.text,
-  //       result: selectedOption.outcome.text
-  //     }]);
+  //     // Get the generative model. Ensure "gemini-1.5-flash" is the correct model name.
+  //     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  //     const nextScenario = scenarios.find(s => s.id === scenario.id + 1);
-  //     setScenario(nextScenario || null);
+  //     // Detailed prompt to generate 20 scenario objects as per your requirements.
+  //     const prompt = `Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+  // "id" (number),
+  // "category" (string),
+  // "description" (string),
+  // "options" (array of option objects, where each option has:
+  //   "id" (number),
+  //   "text" (string),
+  //   "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")).
+  // The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
+  // Output only a valid JSON array without any extra text.`;
 
-  //   } catch (error) {
-  //     console.error('Error processing choice:', error);
-  //   } finally {
-  //     setLoading(false);
+  //     // Generate content from the model using the prompt
+  //     const result = await model.generateContent(prompt);
+  //     // result.response.text() returns the generated text
+  //     const generatedText = result.response.text();
+
+  //     // Parse the generated text as JSON
+  //     const generatedScenarios = JSON.parse(generatedText);
+
+  //     // Use the generated scenarios as needed (for example, updating state)
+  //     setApiScenarios(generatedScenarios);
+  //   } catch (err) {
+  //     console.error("Error generating scenarios via Gemini:", err);
   //   }
   // };
-
-  const handleChoice = async (choiceId: number) => {
-    setLoading(true);
+  const generateScenarios = async () => {
     try {
-      if (!scenario) throw new Error("No active scenario");
-      
-      const selectedOption = scenario.options.find(opt => opt.id === choiceId);
-      if (!selectedOption) throw new Error("Invalid choice");
-  
-      // Calculate new capital and update results
-      const newCapital = capital + (capital * selectedOption.outcome.capitalChange);
-      setCapital(newCapital);
-      setResult(selectedOption.outcome);
-      
-      // Update game history
-      setGameHistory(prev => [...prev, {
-        scenario: scenario.description,
-        choice: selectedOption.text,
-        result: selectedOption.outcome.text
-      }]);
-  
-      // Progress to next scenario
-      const currentScenarioIndex = scenarios.findIndex(s => s.id === scenario.id);
-      const nextScenario = scenarios[currentScenarioIndex + 1];
-  
-      if (nextScenario) {
-        setScenario(nextScenario);
-        setResult(null); // Reset result for next question
-      } else {
-        // Handle game completion
-        setScenario(null);
-        setResult({ 
-          text: `Game Over! Final Capital: $${newCapital.toFixed(2)}`, 
-          capitalChange: 0 
-        });
+      const geminiApiKey =
+        process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY_HERE";
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const prompt = `You are a finance expert. Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+"id" (number),
+"category" (string),
+"description" (string),
+"options" (array of option objects, where each option has:
+  "id" (number),
+  "text" (string),
+  "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")). capitalChange must not go above 100, or below -100, as is the number by which the user's capital is going to change as a result of the choice the user picks. Fixed cost is a cost incurred by the user as a result of his choice in an expense question only. Bonus is a random surprise number given only when the user reveives a surprise bonus like a birthday gift. The capital bonus and cost have to be real world relevant. Please do not exaggerate values. Stay within 100k. Stay within real world limits.
+The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
+Output only a valid JSON array without any extra text.`;
+
+      const result = await model.generateContent(prompt);
+      const rawText = result.response.text();
+      console.log("Raw generated text:", rawText);
+
+      // Remove markdown code fences if present
+      let jsonString = rawText.trim();
+      if (jsonString.startsWith("```json")) {
+        jsonString = jsonString.slice(7).trim(); // remove opening ```
+        if (jsonString.endsWith("```")) {
+          jsonString = jsonString.slice(0, -3).trim(); // remove closing ```
+        }
+      } else if (jsonString.startsWith("```")) {
+        jsonString = jsonString.slice(3).trim(); // remove opening ```
+        if (jsonString.endsWith("```")) {
+          jsonString = jsonString.slice(0, -3).trim(); // remove closing ```
+        }
       }
-  
-    } catch (error) {
-      console.error('Error processing choice:', error);
-    } finally {
-      setLoading(false);
+
+      // Now parse the clean JSON string
+      const generatedScenarios = JSON.parse(jsonString);
+      setApiScenarios(generatedScenarios);
+    } catch (err) {
+      console.error("Error generating scenarios via Gemini:", err);
     }
   };
-  
-  return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-blue-600">
-          Financial Literacy Simulator
-        </h1>
 
-        {!scenario && (
-          <form onSubmit={startGame} className="space-y-4">
-            <div>
-              <label className="block text-red-700 mb-2">
-                Enter Starting Capital ($):
-              </label>
-              <input
-                type="number"
-                value={capital}
-                onChange={(e) => setCapital(Number(e.target.value))}
-                className="w-full p-2 border rounded-md text-black"
-                min="100"
-                required
+  const handleScenarioStart = (e: React.FormEvent) => {
+    e.preventDefault();
+    const startingCapital = parseFloat(userInputCapital);
+
+    if (isNaN(startingCapital) || startingCapital <= 0) {
+      setError("Please enter a valid starting amount");
+      return;
+    }
+
+    startScenarioGame(startingCapital);
+    setError("");
+  };
+
+  const handleChoice = (choice: Option) => {
+    const prevCapital = capital;
+    let newCapital = capital;
+
+    // Add the bonus first
+    if (choice.outcome.bonus) {
+      newCapital += choice.outcome.bonus;
+    }
+
+    // Apply fixed costs
+    if (choice.outcome.fixedCost) {
+      newCapital -= choice.outcome.fixedCost;
+    }
+
+    // Apply percentage changes to the new total
+    newCapital += newCapital * choice.outcome.capitalChange;
+
+    // // Ensure capital doesn't go below 0
+    // newCapital = Math.max(newCapital, 0);
+
+    // Update game history
+    setGameHistory([
+      ...gameHistory,
+      {
+        round: currentRound,
+        capital: newCapital,
+        description: apiScenarios![currentScenarioIndex].description,
+        choice: choice.text,
+        result: choice.outcome.text,
+      },
+    ]);
+
+    setCurrentResult({
+      text: choice.outcome.text,
+      newCapital: newCapital,
+    });
+
+    setCapital(newCapital);
+    setCurrentRound((prevRound) => prevRound + 1);
+
+    if (newCapital < 50) {
+      setGameOver(true);
+    } else {
+      setCurrentScenarioIndex((prev) => (prev + 1) % scenarios.length);
+    }
+
+    if (currentRound >= 20) {
+      setGameOver(true);
+    }
+  };
+
+  const startScenarioGame = (initialCapital: number) => {
+    setCapital(initialCapital);
+    setCurrentScenarioIndex(0);
+    setGameHistory([{ round: 1, capital: initialCapital }]);
+    setCurrentRound(1);
+    setGameOver(false);
+  };
+
+  // New continueGame function
+  const continueGame = () => {
+    setCapital(currentResult?.newCapital || 0);
+    setCurrentRound((prev) => prev + 1);
+    setShowResult(false);
+
+    if (currentScenarioIndex + 1 >= apiScenarios!.length) {
+      setGameOver(true);
+    } else {
+      setCurrentScenarioIndex((prev) => prev + 1);
+    }
+  };
+
+  // If apiScenarios hasn't been generated yet, show a waiting/loader screen.
+  if (apiScenarios === null) {
+    return (
+      <div className="min-h-screen bg-gray-100 p-8">
+        <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6 text-center">
+          <h1 className="text-3xl font-bold text-blue-600 mb-4">
+            Financial Literacy Challenge
+          </h1>
+          <p className="mb-4">Waiting for Gemini to generate scenarios...</p>
+          <button
+            onClick={generateScenarios}
+            className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700"
+          >
+            Generate Scenarios via Gemini
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
+        {gameOver ? (
+          <div>
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
+            <p className="text-lg mb-4 text-black">
+              Final Capital: ${capital.toFixed(2)}
+            </p>
+            <button
+              onClick={() => startScenarioGame(1000)}
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+            >
+              Play Again
+            </button>
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+              <FinancialGraph
+                rounds={gameHistory.map((entry) => entry.round)}
+                capitals={gameHistory.map((entry) => entry.capital)}
               />
             </div>
+          </div>
+        ) : capital === 0 ? (
+          <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-center text-blue-600 mb-4">
+              Financial Literacy Challenge
+            </h1>
             <button
-              type="submit"
-              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-              disabled={loading}
+              onClick={() => startScenarioGame(1000)}
+              className="w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700"
             >
-              {loading ? 'Starting...' : 'Start Game'}
+              Start with $1000
             </button>
-          </form>
-        )}
-
-        {scenario && (
+            <button
+              onClick={() => startScenarioGame(500)}
+              className="w-full bg-yellow-600 text-white py-2 rounded-md hover:bg-yellow-700"
+            >
+              Start with $500 (Hard Mode)
+            </button>
+            <form onSubmit={handleScenarioStart} className="space-y-4">
+              <div>
+                <label className="block text-black mb-2">
+                  Enter Starting Capital ($):
+                </label>
+                <input
+                  type="number"
+                  value={userInputCapital}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, "");
+                    setUserInputCapital(value);
+                  }}
+                  className="w-full p-2 border rounded-md text-black"
+                  placeholder="Enter custom amount"
+                  min="1"
+                  step="1"
+                />
+                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+              >
+                Start with Custom Amount
+              </button>
+            </form>
+            {/* Button to trigger Gemini API scenario generation */}
+            <button
+              onClick={generateScenarios}
+              className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 mt-4"
+            >
+              Generate Scenarios
+            </button>
+          </div>
+        ) : showResult ? (
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-center mb-4">Round Result</h2>
+            <p className="text-lg text-black">{currentResult?.text}</p>
+            <p className="text-lg text-black">
+              New Capital: ${currentResult?.newCapital.toFixed(2)}
+            </p>
+            <button
+              onClick={continueGame}
+              className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+            >
+              Continue to Next Round
+            </button>
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
           <div className="space-y-6">
             <div className="bg-blue-50 p-4 rounded-md">
-              <h2 className="text-xl font-semibold mb-4">
-                Current Capital: 
-                <span className="text-blue-600 ml-2">
-                  ${capital.toFixed(2)}
-                </span>
+              <h2 className="text-xl font-semibold mb-4 text-black">
+                Current Capital: ${capital.toFixed(2)}
               </h2>
-              <p className="text-lg mb-4">{scenario.description}</p>
-              
+              <p className="text-lg mb-4 text-black">
+                {apiScenarios[currentScenarioIndex].description}
+              </p>
               <div className="space-y-3">
-                {scenario.options.map(option => (
+                {apiScenarios[currentScenarioIndex].options.map((option) => (
                   <button
                     key={option.id}
-                    onClick={() => handleChoice(option.id)}
-                    className="w-full p-3 text-left bg-white border rounded-md hover:bg-blue-50 transition-colors disabled:bg-gray-100"
-                    disabled={loading}
+                    onClick={() => handleChoice(option)}
+                    className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors"
                   >
                     {option.text}
                   </button>
                 ))}
               </div>
             </div>
-
-            {result && (
-              <div className="bg-green-50 p-4 rounded-md">
-                <p className="text-red-600 font-semibold">{result.text}</p>
-              </div>
-            )}
-
-            {gameHistory.length > 0 && (
-              <div className="mt-8">
-                <h3 className="text-lg font-semibold mb-3">Game History</h3>
-                <ul className="space-y-2">
-                  {gameHistory.map((entry, index) => (
-                    <li key={index} className="bg-gray-50 p-3 rounded-md">
-                      <p className="font-medium">{entry.scenario}</p>
-                      <p>Choice: {entry.choice}</p>
-                      <p>Result: {entry.result}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-2 text-black">
+                Game History
+              </h3>
+              <ul className="space-y-2">
+                {gameHistory.map((entry, index) => (
+                  <li
+                    key={index}
+                    className="bg-gray-50 p-3 rounded-md text-black"
+                  >
+                    <p>
+                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                    </p>
+                    <p className="text-sm">Scenario: {entry.description}</p>
+                    <p className="text-sm">Choice: {entry.choice}</p>
+                    <p className="text-sm">Result: {entry.result}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </div>
