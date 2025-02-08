@@ -1,347 +1,7 @@
-// "use client";
-
-// import { useState, useEffect, FormEvent } from 'react';
-// import axios from 'axios';
-
-// // Type definitions
-// interface Outcome {
-//   text: string;
-//   capitalChange: number;
-// }
-
-// interface Option {
-//   id: number;
-//   text: string;
-//   outcome: Outcome;
-// }
-
-// interface Scenario {
-//   id: number;
-//   description: string;
-//   options: Option[];
-// }
-
-// interface GameHistoryEntry {
-//   scenario: string;
-//   choice: string;
-//   result: string;
-// }
-
-// // Configure Axios for backend communication
-// const api = axios.create({
-//   baseURL: 'http://localhost:5002/api',
-// });
-
-// export default function FinanceGame() {
-//   const [capital, setCapital] = useState<number>(0);
-//   const [scenario, setScenario] = useState<Scenario | null>(null);
-//   const [result, setResult] = useState<Outcome | null>(null);
-//   const [gameHistory, setGameHistory] = useState<GameHistoryEntry[]>([]);
-//   const [loading, setLoading] = useState<boolean>(false);
-
-//   // Hardcoded scenarios (replace with backend calls if needed)
-//   const scenarios: Scenario[] = [
-//     {
-//       id: 1,
-//       description: "You received an unexpected $1000 bonus. What will you do?",
-//       options: [
-//         { 
-//           id: 1, 
-//           text: "Invest in stock market", 
-//           outcome: { 
-//             text: "Stocks gained 15%!", 
-//             capitalChange: 0.15 
-//           } 
-//         },
-//         { 
-//           id: 2, 
-//           text: "Put in savings account", 
-//           outcome: { 
-//             text: "Earned 2% interest", 
-//             capitalChange: 0.02 
-//           } 
-//         },
-//         { 
-//           id: 3, 
-//           text: "Buy new electronics", 
-//           outcome: { 
-//             text: "Enjoyment but no returns", 
-//             capitalChange: -0.3 
-//           } 
-//         }
-//       ]
-//     },
-//     {
-//       id: 2,
-//       description: "Your car needs $500 repairs. How do you handle it?",
-//       options: [
-//         { 
-//           id: 1, 
-//           text: "Use emergency fund", 
-//           outcome: { 
-//             text: "Smart financial move!", 
-//             capitalChange: -0.05 
-//           } 
-//         },
-//         { 
-//           id: 2, 
-//           text: "Put on credit card", 
-//           outcome: { 
-//             text: "Accrued 18% interest", 
-//             capitalChange: -0.18 
-//           } 
-//         },
-//         { 
-//           id: 3, 
-//           text: "Ignore the problem", 
-//           outcome: { 
-//             text: "Costlier repairs later", 
-//             capitalChange: -0.4 
-//           } 
-//         }
-//       ]
-//     },
-//     {
-//       id: 3,
-//       description: "You have an opportunity to start a side business. What do you do?",
-//       options: [
-//         { 
-//           id: 1, 
-//           text: "Invest $500 in the business", 
-//           outcome: { 
-//             text: "Business grew by 50%", 
-//             capitalChange: 0.5 
-//           } 
-//         },
-//         { 
-//           id: 2, 
-//           text: "Save the money", 
-//           outcome: { 
-//             text: "Earned 1% interest", 
-//             capitalChange: 0.01 
-//           } 
-//         },
-//         { 
-//           id: 3, 
-//           text: "Spend it on a vacation", 
-//           outcome: { 
-//             text: "Relaxed but no returns", 
-//             capitalChange: -0.2 
-//           } 
-//         }
-//       ]
-//     },
-//     {
-//       id: 4,
-//       description: "You received a medical bill of $300. How do you handle it?",
-//       options: [
-//         { 
-//           id: 1, 
-//           text: "Pay with savings", 
-//           outcome: { 
-//             text: "Smart move!", 
-//             capitalChange: -0.1 
-//           } 
-//         },
-//         { 
-//           id: 2, 
-//           text: "Put it on credit", 
-//           outcome: { 
-//             text: "Accrued 20% interest", 
-//             capitalChange: -0.2 
-//           } 
-//         },
-//         { 
-//           id: 3, 
-//           text: "Ignore it", 
-//           outcome: { 
-//             text: "Debt collectors called", 
-//             capitalChange: -0.5 
-//           } 
-//         }
-//       ]
-//     }
-//   ];
-
-//   const startGame = async (e: FormEvent) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     try {
-//       const initialCapital = parseFloat(capital.toString());
-//       if (isNaN(initialCapital)) {
-//         throw new Error("Invalid capital amount");
-//       }
-      
-//       setCapital(initialCapital);
-//       setGameHistory([]);
-//       setResult(null);
-//       setScenario(scenarios[0]);
-//     } catch (error) {
-//       console.error('Error starting game:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   // const handleChoice = async (choiceId: number) => {
-//   //   setLoading(true);
-//   //   try {
-//   //     if (!scenario) throw new Error("No active scenario");
-      
-//   //     const selectedOption = scenario.options.find(opt => opt.id === choiceId);
-//   //     if (!selectedOption) throw new Error("Invalid choice");
-
-//   //     const newCapital = capital + (capital * selectedOption.outcome.capitalChange);
-      
-//   //     setCapital(newCapital);
-//   //     setResult(selectedOption.outcome);
-      
-//   //     setGameHistory(prev => [...prev, {
-//   //       scenario: scenario.description,
-//   //       choice: selectedOption.text,
-//   //       result: selectedOption.outcome.text
-//   //     }]);
-
-//   //     const nextScenario = scenarios.find(s => s.id === scenario.id + 1);
-//   //     setScenario(nextScenario || null);
-
-//   //   } catch (error) {
-//   //     console.error('Error processing choice:', error);
-//   //   } finally {
-//   //     setLoading(false);
-//   //   }
-//   // };
-
-//   const handleChoice = async (choiceId: number) => {
-//     setLoading(true);
-//     try {
-//       if (!scenario) throw new Error("No active scenario");
-      
-//       const selectedOption = scenario.options.find(opt => opt.id === choiceId);
-//       if (!selectedOption) throw new Error("Invalid choice");
-  
-//       // Calculate new capital and update results
-//       const newCapital = capital + (capital * selectedOption.outcome.capitalChange);
-//       setCapital(newCapital);
-//       setResult(selectedOption.outcome);
-      
-//       // Update game history
-//       setGameHistory(prev => [...prev, {
-//         scenario: scenario.description,
-//         choice: selectedOption.text,
-//         result: selectedOption.outcome.text
-//       }]);
-  
-//       // Progress to next scenario
-//       const currentScenarioIndex = scenarios.findIndex(s => s.id === scenario.id);
-//       const nextScenario = scenarios[currentScenarioIndex + 1];
-  
-//       if (nextScenario) {
-//         setScenario(nextScenario);
-//         setResult(null); // Reset result for next question
-//       } else {
-//         // Handle game completion
-//         setScenario(null);
-//         setResult({ 
-//           text: `Game Over! Final Capital: $${newCapital.toFixed(2)}`, 
-//           capitalChange: 0 
-//         });
-//       }
-  
-//     } catch (error) {
-//       console.error('Error processing choice:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-  
-//   return (
-//     <div className="min-h-screen bg-gray-100 py-8 px-4">
-//       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-6">
-//         <h1 className="text-3xl font-bold text-center mb-8 text-blue-600">
-//           Financial Literacy Simulator
-//         </h1>
-
-//         {!scenario && (
-//           <form onSubmit={startGame} className="space-y-4">
-//             <div>
-//               <label className="block text-red-700 mb-2">
-//                 Enter Starting Capital ($):
-//               </label>
-//               <input
-//                 type="number"
-//                 value={capital}
-//                 onChange={(e) => setCapital(Number(e.target.value))}
-//                 className="w-full p-2 border rounded-md text-black"
-//                 min="100"
-//                 required
-//               />
-//             </div>
-//             <button
-//               type="submit"
-//               className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-//               disabled={loading}
-//             >
-//               {loading ? 'Starting...' : 'Start Game'}
-//             </button>
-//           </form>
-//         )}
-
-//         {scenario && (
-//           <div className="space-y-6">
-//             <div className="bg-blue-50 p-4 rounded-md">
-//               <h2 className="text-xl font-semibold mb-4 text-black">
-//                 Current Capital: 
-//                 <span className="text-blue-600 ml-2">
-//                   ${capital.toFixed(2)}
-//                 </span>
-//               </h2>
-//               <p className="text-lg mb-4 text-black">{scenario.description}</p>
-              
-//               <div className="space-y-3">
-//                 {scenario.options.map(option => (
-//                   <button
-//                     key={option.id}
-//                     onClick={() => handleChoice(option.id)}
-//                     className="w-full p-3 text-left text-black bg-white border rounded-md hover:bg-blue-50 transition-colors disabled:bg-gray-100"
-//                     disabled={loading}
-//                   >
-//                     {option.text}
-//                   </button>
-//                 ))}
-//               </div>
-//             </div>
-
-//             {result && (
-//               <div className="bg-green-50 p-4 rounded-md">
-//                 <p className="text-red-600 font-semibold">{result.text}</p>
-//               </div>
-//             )}
-
-//             {gameHistory.length > 0 && (
-//               <div className="mt-8">
-//                 <h3 className="text-lg font-semibold mb-3 text-black">Game History</h3>
-//                 <ul className="space-y-2">
-//                   {gameHistory.map((entry, index) => (
-//                     <li key={index} className="bg-gray-50 p-3 rounded-md text-black">
-//                       <p className="font-medium">{entry.scenario}</p>
-//                       <p>Choice: {entry.choice}</p>
-//                       <p>Result: {entry.result}</p>
-//                     </li>
-//                   ))}
-//                 </ul>
-//               </div>
-//             )}
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
 "use client";
 
 import { useState, FormEvent } from 'react';
+import FinancialGraph from './financeChart';
 
 type Outcome = {
   text: string;
@@ -509,8 +169,11 @@ const scenarios: Scenario[] = [
 export default function FinanceGame() {
   const [capital, setCapital] = useState(0);
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
-  const [gameHistory, setGameHistory] = useState<string[]>([]);
+  //const [gameHistory, setGameHistory] = useState<string[]>([]);
   const [gameOver, setGameOver] = useState(false);
+
+  const [currentRound, setCurrentRound] = useState(1);
+  const [gameHistory, setGameHistory] = useState<{ round: number; capital: number }[]>([]);
 
   const [userInputCapital, setUserInputCapital] = useState('');
   const [error, setError] = useState('');
@@ -547,10 +210,13 @@ export default function FinanceGame() {
     // // Ensure capital doesn't go below 0
     // newCapital = Math.max(newCapital, 0);
 
-    const historyEntry = `${scenarios[currentScenarioIndex].description} - Chose: ${choice.text} - ${choice.outcome.text} - New Capital: $${newCapital.toFixed(2)}`;
-    
+    setGameHistory((prevHistory) => [
+      ...prevHistory,
+      { round: currentRound + 1, capital: newCapital }
+    ]);
+
     setCapital(newCapital);
-    setGameHistory([...gameHistory, historyEntry]);
+    setCurrentRound((prevRound) => prevRound + 1);
     
     if (newCapital < 50) {
       setGameOver(true);
@@ -562,7 +228,8 @@ export default function FinanceGame() {
   const startGame = (initialCapital: number) => {
     setCapital(initialCapital);
     setCurrentScenarioIndex(0);
-    setGameHistory([]);
+    setGameHistory([{ round: 1, capital: initialCapital }]);
+    setCurrentRound(1);
     setGameOver(false);
   };
 
@@ -583,10 +250,14 @@ export default function FinanceGame() {
             <ul className="space-y-2">
               {gameHistory.map((entry, index) => (
                 <li key={index} className="bg-gray-50 p-3 rounded-md text-black">
-                  {entry}
+                  Round {entry.round}: ${entry.capital.toFixed(2)}
                 </li>
               ))}
             </ul>
+            <FinancialGraph
+              rounds={gameHistory.map((entry) => entry.round)}
+              capitals={gameHistory.map((entry) => entry.capital)}
+            />
           </div>
         </div>
       </div>
