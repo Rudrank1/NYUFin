@@ -24,6 +24,27 @@ type Scenario = {
   options: Option[];
 };
 
+type Month = {
+  name: string;
+  days: number;
+  rounds: number;
+};
+
+const months: Month[] = [
+  { name: "January", days: 31, rounds: 4 },
+  { name: "February", days: 28, rounds: 3 },
+  { name: "March", days: 31, rounds: 4 },
+  { name: "April", days: 30, rounds: 3 },
+  { name: "May", days: 31, rounds: 4 },
+  { name: "June", days: 30, rounds: 3 },
+  { name: "July", days: 31, rounds: 4 },
+  { name: "August", days: 31, rounds: 4 },
+  { name: "September", days: 30, rounds: 3 },
+  { name: "October", days: 31, rounds: 4 },
+  { name: "November", days: 30, rounds: 3 },
+  { name: "December", days: 31, rounds: 4 }
+];
+
 const scenarios: Scenario[] = [
   {
     id: 1,
@@ -783,9 +804,13 @@ export default function FinanceGame() {
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [currentRound, setCurrentRound] = useState(1);
+  const [currentMonth, setCurrentMonth] = useState(0);
+  const [currentMonthRound, setCurrentMonthRound] = useState(1);
   const [gameHistory, setGameHistory] = useState<
     {
       round: number;
+      month: string;
+      monthRound: number;
       capital: number;
       description?: string;
       choice?: string;
@@ -800,52 +825,8 @@ export default function FinanceGame() {
     newCapital: number;
   } | null>(null);
 
-  // New state: Hold scenarios generated via Gemini API.
   const [apiScenarios, setApiScenarios] = useState<Scenario[] | null>(null);
 
-  // Helper: If Gemini-generated scenarios are available, use them; otherwise fallback to the static array.
-  //const activeScenarios: Scenario[] = apiScenarios || scenarios;
-
-  ///////////////////////
-  // GEMINI API INTEGRATION
-  ///////////////////////
-
-  // Gemini API Integration using @google/generative-ai library
-  // const generateScenarios = async () => {
-  //   try {
-  //     // Initialize the client with your API key from .env.local
-  //     const geminiApiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || "YOUR_API_KEY_HERE";
-  //     const genAI = new GoogleGenerativeAI(geminiApiKey);
-
-  //     // Get the generative model. Ensure "gemini-1.5-flash" is the correct model name.
-  //     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-  //     // Detailed prompt to generate 20 scenario objects as per your requirements.
-  //     const prompt = `Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
-  // "id" (number),
-  // "category" (string),
-  // "description" (string),
-  // "options" (array of option objects, where each option has:
-  //   "id" (number),
-  //   "text" (string),
-  //   "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")).
-  // The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
-  // Output only a valid JSON array without any extra text.`;
-
-  //     // Generate content from the model using the prompt
-  //     const result = await model.generateContent(prompt);
-  //     // result.response.text() returns the generated text
-  //     const generatedText = result.response.text();
-
-  //     // Parse the generated text as JSON
-  //     const generatedScenarios = JSON.parse(generatedText);
-
-  //     // Use the generated scenarios as needed (for example, updating state)
-  //     setApiScenarios(generatedScenarios);
-  //   } catch (err) {
-  //     console.error("Error generating scenarios via Gemini:", err);
-  //   }
-  // };
   const generateScenarios = async () => {
     try {
       const geminiApiKey =
@@ -853,8 +834,9 @@ export default function FinanceGame() {
       const genAI = new GoogleGenerativeAI(geminiApiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0. However, your prompts must also give them a realistic chance at beating you, while giving them a hard time.
-      Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0.
+However, your prompts must also give them a realistic chance at beating you, while giving them a hard time.
+Generate a JSON array with 20 scenario objects. Please try to make your scenarios sound human-like, casual. Each scenario object should have these keys:
 "id" (number),
 "category" (string),
 "description" (string),
@@ -923,14 +905,13 @@ Output only a valid JSON array without any extra text.`;
     // Apply percentage changes to the new total
     newCapital += newCapital * choice.outcome.capitalChange;
 
-    // // Ensure capital doesn't go below 0
-    // newCapital = Math.max(newCapital, 0);
-
     // Update game history
     setGameHistory([
       ...gameHistory,
       {
         round: currentRound,
+        month: months[currentMonth].name,
+        monthRound: currentMonthRound,
         capital: newCapital,
         description: apiScenarios![currentScenarioIndex].description,
         choice: choice.text,
@@ -942,6 +923,20 @@ Output only a valid JSON array without any extra text.`;
       text: choice.outcome.text,
       newCapital: newCapital,
     });
+
+    setShowResult(true);
+
+    // Check if we need to move to the next month
+    if (currentMonthRound >= months[currentMonth].rounds) {
+      if (currentMonth + 1 >= months.length) {
+        setGameOver(true);
+      } else {
+        setCurrentMonth((prev) => prev + 1);
+        setCurrentMonthRound(1);
+      }
+    } else {
+      setCurrentMonthRound((prev) => prev + 1);
+    }
 
     setCapital(newCapital);
     setCurrentRound((prevRound) => prevRound + 1);
@@ -960,7 +955,14 @@ Output only a valid JSON array without any extra text.`;
   const startScenarioGame = (initialCapital: number) => {
     setCapital(initialCapital);
     setCurrentScenarioIndex(0);
-    setGameHistory([{ round: 1, capital: initialCapital }]);
+    setCurrentMonth(0);
+    setCurrentMonthRound(1);
+    setGameHistory([{ 
+      round: 1, 
+      month: months[0].name, 
+      monthRound: 1, 
+      capital: initialCapital 
+    }]);
     setCurrentRound(1);
     setGameOver(false);
   };
@@ -968,11 +970,13 @@ Output only a valid JSON array without any extra text.`;
   // New continueGame function
   const continueGame = () => {
     setCapital(currentResult?.newCapital || 0);
-    setCurrentRound((prev) => prev + 1);
     setShowResult(false);
 
-    if (currentScenarioIndex + 1 >= apiScenarios!.length) {
+    // Check if game should end
+    if (currentMonth >= months.length) {
       setGameOver(true);
+    } else if (currentScenarioIndex + 1 >= apiScenarios!.length) {
+      setCurrentScenarioIndex(0); // Reset scenarios if we run out
     } else {
       setCurrentScenarioIndex((prev) => prev + 1);
     }
@@ -1024,7 +1028,7 @@ Output only a valid JSON array without any extra text.`;
                     className="bg-gray-50 p-3 rounded-md text-black"
                   >
                     <p>
-                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                      {entry.month} - Round {entry.monthRound} (Overall Round {entry.round}): ${entry.capital.toFixed(2)}
                     </p>
                     <p className="text-sm">Scenario: {entry.description}</p>
                     <p className="text-sm">Choice: {entry.choice}</p>
@@ -1113,7 +1117,7 @@ Output only a valid JSON array without any extra text.`;
                     className="bg-gray-50 p-3 rounded-md text-black"
                   >
                     <p>
-                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                      {entry.month} - Round {entry.monthRound} (Overall Round {entry.round}): ${entry.capital.toFixed(2)}
                     </p>
                     <p className="text-sm">Scenario: {entry.description}</p>
                     <p className="text-sm">Choice: {entry.choice}</p>
@@ -1129,6 +1133,9 @@ Output only a valid JSON array without any extra text.`;
               <h2 className="text-xl font-semibold mb-4 text-black">
                 Current Capital: ${capital.toFixed(2)}
               </h2>
+              <p className="text-lg mb-2 text-black">
+                {months[currentMonth].name} - Round {currentMonthRound} of {months[currentMonth].rounds}
+              </p>
               <p className="text-lg mb-4 text-black">
                 {apiScenarios[currentScenarioIndex].description}
               </p>
@@ -1155,7 +1162,7 @@ Output only a valid JSON array without any extra text.`;
                     className="bg-gray-50 p-3 rounded-md text-black"
                   >
                     <p>
-                      Round {entry.round}: ${entry.capital.toFixed(2)}
+                      {entry.month} - Round {entry.monthRound} (Overall Round {entry.round}): ${entry.capital.toFixed(2)}
                     </p>
                     <p className="text-sm">Scenario: {entry.description}</p>
                     <p className="text-sm">Choice: {entry.choice}</p>
