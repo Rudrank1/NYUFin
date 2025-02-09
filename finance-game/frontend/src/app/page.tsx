@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
+import Lottie from "lottie-react";
 import FinancialGraph from "./financeChart";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Spinner from "./spinner";
+import groovyWalkAnimation from "./groovyWalk.json";
 
 type Outcome = {
   text: string;
@@ -53,16 +55,16 @@ type MonthlyExpenses = {
 
 const months: Month[] = [
   { name: "January", days: 31, rounds: 4 },
-  { name: "February", days: 28, rounds: 3 },
+  { name: "February", days: 28, rounds: 4 },
   { name: "March", days: 31, rounds: 4 },
-  { name: "April", days: 30, rounds: 3 },
+  { name: "April", days: 30, rounds: 4 },
   { name: "May", days: 31, rounds: 4 },
-  { name: "June", days: 30, rounds: 3 },
+  { name: "June", days: 30, rounds: 4 },
   { name: "July", days: 31, rounds: 4 },
   { name: "August", days: 31, rounds: 4 },
-  { name: "September", days: 30, rounds: 3 },
+  { name: "September", days: 30, rounds: 4 },
   { name: "October", days: 31, rounds: 4 },
-  { name: "November", days: 30, rounds: 3 },
+  { name: "November", days: 30, rounds: 4 },
   { name: "December", days: 31, rounds: 4 },
 ];
 
@@ -206,7 +208,7 @@ export default function FinanceGame() {
     }
 
     // Set initial salary
-    const initialSalary = startingCapital * 0.25; // 25% of starting capital
+    const initialSalary = Math.round(startingCapital * 0.25); // 25% of starting capital
     setMonthlySalary(initialSalary);
 
     // Set default expenses based on monthly salary
@@ -323,14 +325,14 @@ export default function FinanceGame() {
     setCapital(newCapital);
     setCurrentRound((prevRound) => prevRound + 1);
 
-    if (newCapital < 50) {
+    if (newCapital <= 0) {
       setGameOver(true);
       setWin(false);
     }
   };
 
   const startScenarioGame = (initialCapital: number) => {
-    const initialSalary = initialCapital * 0.25; // 25% of initial capital
+    const initialSalary =  Math.round(initialCapital * 0.25); // 25% of initial capital
     setMonthlySalary(initialSalary);
     setCapital(initialCapital);
     setCurrentScenarioIndex(0);
@@ -858,9 +860,9 @@ export default function FinanceGame() {
       // Generate exactly 4 scenarios per month
       const totalScenarios = selectedMonths * 4;
 
-      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0.
+      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0, while providing financial situations. You should not give repetitive scenarios.
 However, your prompts must also give them a realistic chance at beating you, while giving them a hard time.
-Generate a JSON array with EXACTLY ${totalScenarios} scenario objects (${selectedMonths} months × 4 UNIQUE scenarios per month).
+Generate a JSON array with EXACTLY ${totalScenarios} scenario objects. Scenarios must be UNIQUE across months and rounds. Do not use the same scenarios.
 Please try to make your scenarios sound human-like, casual. Each scenario object should have these keys:
 "id" (number),
 "category" (string),
@@ -872,7 +874,7 @@ Please try to make your scenarios sound human-like, casual. Each scenario object
 capitalChange is the number by which the user's capital is going to change as a result of the choice the user picks. It must not go above 0.5, or below -0.5.
 Fixed cost must be between ${fixedCostMin} and ${fixedCostMax} (can be positive or negative).
 Bonus must be between ${bonusMin} and ${bonusMax} (always positive).
-The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
+The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Funds, and related concepts.
 Output only a valid JSON array without any extra text.`;
 
       const result = await model.generateContent(prompt);
@@ -912,6 +914,55 @@ Output only a valid JSON array without any extra text.`;
       setLoading(false);
     }
   };
+
+  const FINANCIAL_QUOTES = [
+    "Budgeting your money is the key to having enough - Elizabeth Warren",
+    "A budget is telling your money where to go instead of wondering where it went - Dave Ramsey",
+    "Financial peace isn't the acquisition of stuff - Dave Ramsey",
+    "The stock market is a device for transferring money from the impatient to the patient - Warren Buffett",
+    "Every time you borrow money, you're robbing your future self - Nathan W. Morris",
+    "Money is usually attracted, not pursued - Jim Rohn",
+    "Financial fitness is reality if you're willing to pursue it - Will Robinson",
+    "The most precious resource we have is time - Steve Jobs",
+    "Wealth consists in having few wants - Epictetus",
+    "Financial literacy is life-saving - Mellody Hobson"
+  ];
+
+  // Bubble animation component
+const LoadingBubbles = () => {
+  const [currentQuote, setCurrentQuote] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentQuote(prev => (prev + 1) % FINANCIAL_QUOTES.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative h-64 w-full">
+      {/* Lottie bubble animation */}
+      
+      {/* Floating quotes */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center">
+        <div className="animate-float text-xl font-semibold bg-white/90 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg transform transition-all duration-1000">
+          {FINANCIAL_QUOTES[currentQuote]}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Add this CSS animation
+<style jsx global>{`
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(-2deg); }
+    50% { transform: translateY(-20px) rotate(2deg); }
+  }
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+`}</style>
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex">
@@ -977,13 +1028,17 @@ Output only a valid JSON array without any extra text.`;
                     </p>
                   </div>
                   <div className="bg-green-50 p-6 rounded-lg">
-                    <h3 className="font-semibold mb-2 text-black">🎯 Dynamic Outcomes</h3>
+                    <h3 className="font-semibold mb-2 text-black">
+                      🎯 Dynamic Outcomes
+                    </h3>
                     <p className="text-sm text-gray-600">
                       AI-generated scenarios with realistic impacts
                     </p>
                   </div>
                   <div className="bg-purple-50 p-6 rounded-lg">
-                    <h3 className="font-semibold mb-2 text-black">📊 Progress Tracking</h3>
+                    <h3 className="font-semibold mb-2 text-black">
+                      📊 Progress Tracking
+                    </h3>
                     <p className="text-sm text-gray-600">
                       Visualize your financial journey with charts
                     </p>
@@ -1114,7 +1169,12 @@ Output only a valid JSON array without any extra text.`;
               <h2 className="text-xl font-bold text-gray-700 mb-4">
                 Generating Scenarios...
               </h2>
+              <p className="text-sm text-gray-500 mt-2">
+                This usually takes 10-15 seconds
+              </p>
               <Spinner />
+              {/* <LoadingBubbles /> */}
+              <Lottie animationData={groovyWalkAnimation} loop={true} />
             </div>
           ) : apiScenarios ? (
             <div className="space-y-6">
