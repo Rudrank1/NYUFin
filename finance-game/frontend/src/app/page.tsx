@@ -216,7 +216,6 @@ export default function FinanceGame() {
     setMonthlyExpenses(calculateDefaultExpenses(initialSalary));
     setShowExpensesForm(true);
     setError("");
-    setCustomOrNot(true);
   };
 
   const handleExpensesSubmit = (e: React.FormEvent) => {
@@ -351,7 +350,7 @@ export default function FinanceGame() {
     setCurrentRound(1);
     setGameOver(false);
     generateScenarios();
-    if (!customOrNot) {
+    if (customOrNot === false) {
       setSelectedMonths(12);
     }
   };
@@ -1057,7 +1056,7 @@ const LoadingBubbles = () => {
                   {/* Preset Buttons */}
                   <div className="grid gap-4 mb-8">
                     <button
-                      onClick={() => startScenarioGame(1000)}
+                      onClick={() => { setCustomOrNot(false); startScenarioGame(1000); }}
                       disabled={loading}
                       className="flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white py-4 rounded-lg transition-all disabled:opacity-50"
                     >
@@ -1088,7 +1087,7 @@ const LoadingBubbles = () => {
                     <div className="flex-1 border-t border-gray-200"></div>
                   </div>
 
-                  <form onSubmit={handleScenarioStart} className="space-y-6">
+                  <form onSubmit={(e) => { setCustomOrNot(true); handleScenarioStart(e); }} className="space-y-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Custom Starting Amount
