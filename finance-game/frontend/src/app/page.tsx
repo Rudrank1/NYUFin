@@ -123,6 +123,7 @@ export default function FinanceGame() {
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [monthlySalary, setMonthlySalary] = useState(0);
   const [customOrNot, setCustomOrNot] = useState(false);
+  const [usedScenarioIndices, setUsedScenarioIndices] = useState<Set<number>>(new Set());
 
   const US_STATES = [
     "Alabama",
@@ -287,6 +288,9 @@ export default function FinanceGame() {
 
     setShowResult(true);
 
+    // Update used scenarios tracking
+    setUsedScenarioIndices(prev => new Set(prev).add(currentScenarioIndex));
+
     // Check if we need to move to the next month
     if (currentMonthRound >= 4) {
       // Always 4 rounds per month
@@ -316,11 +320,16 @@ export default function FinanceGame() {
         setMonthlySalary((prevSalary) => prevSalary * 1.05);
         setCurrentMonth((prev) => prev + 1);
         setCurrentMonthRound(1);
-        setCurrentScenarioIndex((prev) => prev + 4); // Move to next month's scenarios
+        
+        // Get next available scenario
+        const nextScenario = getNextAvailableScenario();
+        setCurrentScenarioIndex(nextScenario);
       }
     } else {
       setCurrentMonthRound((prev) => prev + 1);
-      setCurrentScenarioIndex((prev) => prev + 1); // Move to next scenario
+      // Get next available scenario
+      const nextScenario = getNextAvailableScenario();
+      setCurrentScenarioIndex(nextScenario);
     }
 
     setCapital(newCapital);
@@ -382,6 +391,7 @@ export default function FinanceGame() {
     setShowResult(false);
     setCurrentResult(null);
     setShowAnalysis(false);
+    setUsedScenarioIndices(new Set()); // Reset used scenarios tracking
   };
 
   const formatAnalysis = (analysis: string) => {
@@ -863,20 +873,21 @@ export default function FinanceGame() {
       // Generate exactly 4 scenarios per month
       const totalScenarios = selectedMonths * 4;
 
-      const prompt = `You are a finance expert playing a game, providing financial situations. You should not give repetitive , please.
-Generate a JSON array with EXACTLY ${totalScenarios} unique scenario objects. Scenarios must be UNIQUE across months and rounds. Do not use the same scenarios.
-Please try to make your scenarios sound human-like, casual. Each scenario object should have these keys:
+      const prompt = `You are a finance expert playing a game, providing financial situations.
+Generate a JSON array with EXACTLY ${totalScenarios} UNIQUE scenario objects. Each scenario MUST be completely different from all others - no reusing or rephrasing similar scenarios.
+Please make scenarios sound human-like and casual. Each scenario object should have these keys:
 "id" (number),
 "category" (string),
-"description" (string),
+"description" (string - must be unique across ALL scenarios),
 "options" (array of option objects, where each option has:
   "id" (number),
   "text" (string),
   "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")).
-capitalChange is the number by which the user's capital is going to change as a result of the choice the user picks. It must not go above 0.5, or below -0.5.
+capitalChange must be between -0.5 and 0.5.
 Fixed cost must be between ${fixedCostMin} and ${fixedCostMax} (can be positive or negative).
 Bonus must be between ${bonusMin} and ${bonusMax} (always positive).
-The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Funds, and related concepts.
+Cover diverse topics: Investing, Budgeting, Debt Management, Retirement Planning, Emergency Funds, etc.
+Ensure NO scenario descriptions or outcomes are repeated or similar to others.
 Output only a valid JSON array without any extra text.`;
 
       const result = await model.generateContent(prompt);
@@ -965,6 +976,26 @@ const LoadingBubbles = () => {
     animation: float 3s ease-in-out infinite;
   }
 `}</style>
+
+  // Add new helper function to get next available scenario
+  const getNextAvailableScenario = () => {
+    if (!apiScenarios) return 0;
+    
+    // If all scenarios have been used, reset the tracking
+    if (usedScenarioIndices.size >= apiScenarios.length) {
+      setUsedScenarioIndices(new Set());
+      return 0;
+    }
+
+    // Find the first unused scenario
+    for (let i = 0; i < apiScenarios.length; i++) {
+      if (!usedScenarioIndices.has(i)) {
+        return i;
+      }
+    }
+    
+    return 0; // Fallback
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 flex">
