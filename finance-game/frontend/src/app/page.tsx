@@ -122,6 +122,7 @@ export default function FinanceGame() {
   const [showPercentages, setShowPercentages] = useState(false);
   const [selectedMonths, setSelectedMonths] = useState(1);
   const [monthlySalary, setMonthlySalary] = useState(0);
+  const [customOrNot, setCustomOrNot] = useState(false);
 
   const US_STATES = [
     "Alabama",
@@ -215,6 +216,7 @@ export default function FinanceGame() {
     setMonthlyExpenses(calculateDefaultExpenses(initialSalary));
     setShowExpensesForm(true);
     setError("");
+    setCustomOrNot(true);
   };
 
   const handleExpensesSubmit = (e: React.FormEvent) => {
@@ -242,8 +244,8 @@ export default function FinanceGame() {
       setError("Total expenses cannot exceed starting capital");
       return;
     }
-
     // Start game with remaining capital after expenses
+    setCustomOrNot(true);
     startScenarioGame(startingCapital - totalExpenses);
     setShowExpensesForm(false);
   };
@@ -349,7 +351,9 @@ export default function FinanceGame() {
     setCurrentRound(1);
     setGameOver(false);
     generateScenarios();
-    setSelectedMonths(12);
+    if (!customOrNot) {
+      setSelectedMonths(12);
+    }
   };
 
   // New continueGame function
@@ -860,9 +864,8 @@ export default function FinanceGame() {
       // Generate exactly 4 scenarios per month
       const totalScenarios = selectedMonths * 4;
 
-      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0, while providing financial situations. You should not give repetitive scenarios.
-However, your prompts must also give them a realistic chance at beating you, while giving them a hard time.
-Generate a JSON array with EXACTLY ${totalScenarios} scenario objects. Scenarios must be UNIQUE across months and rounds. Do not use the same scenarios.
+      const prompt = `You are a finance expert playing a game, providing financial situations. You should not give repetitive , please.
+Generate a JSON array with EXACTLY ${totalScenarios} unique scenario objects. Scenarios must be UNIQUE across months and rounds. Do not use the same scenarios.
 Please try to make your scenarios sound human-like, casual. Each scenario object should have these keys:
 "id" (number),
 "category" (string),
