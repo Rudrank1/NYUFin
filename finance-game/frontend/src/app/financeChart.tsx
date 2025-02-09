@@ -23,9 +23,10 @@ ChartJS.register(
 interface FinancialGraphProps {
   rounds: number[];
   capitals: number[];
+  labels?: string[];
 }
 
-export default function FinancialGraph({ rounds, capitals }: FinancialGraphProps) {
+export default function FinancialGraph({ rounds, capitals, labels }: FinancialGraphProps) {
   const data = {
     labels: rounds, // Game rounds
     datasets: [
@@ -48,6 +49,28 @@ export default function FinancialGraph({ rounds, capitals }: FinancialGraphProps
       title: {
         display: true,
         text: 'Financial Progress Over Game Rounds'
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: labels ? 'Month' : 'Round'
+        },
+        ticks: {
+          callback: function(value: any) {
+            if (labels) {
+              return labels[value];
+            }
+            return value;
+          }
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: 'Capital ($)'
+        }
       }
     }
   };
