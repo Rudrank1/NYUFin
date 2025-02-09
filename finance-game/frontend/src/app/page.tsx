@@ -853,14 +853,17 @@ export default function FinanceGame() {
       const genAI = new GoogleGenerativeAI(geminiApiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `You are a finance expert. Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
+      const prompt = `You are a finance expert playing a game, where your goal is to make the user's capital fall to 0. However, your prompts must also give them a realistic chance at beating you, while giving them a hard time.
+      Generate a JSON array with 20 scenario objects. Each scenario object should have these keys:
 "id" (number),
 "category" (string),
 "description" (string),
 "options" (array of option objects, where each option has:
   "id" (number),
   "text" (string),
-  "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")). capitalChange must not go above 100, or below -100, as is the number by which the user's capital is going to change as a result of the choice the user picks. Fixed cost is a cost incurred by the user as a result of his choice in an expense question only. Bonus is a random surprise number given only when the user reveives a surprise bonus like a birthday gift. The capital bonus and cost have to be real world relevant. Please do not exaggerate values. Stay within 100k. Stay within real world limits.
+  "outcome" (object with "text" as string, "capitalChange" as number, optional "fixedCost" and "bonus")).
+capitalChange is the number by which the user's capital is going to change as a result of the choice the user picks. It must not go above 0.5, or below -0.5.
+Fixed cost must not go above  or below -10000 as is a cost incurred by the user as a result of his choice in an expense question only. Bonus must not go above 5000 or below 0, as it is a random surprise number given only when the user reveives a surprise bonus like a birthday gift. The capital bonus and cost have to be real world relevant. Please do not exaggerate values. Stay within 100k. Stay within real world limits.
 The scenarios should cover topics such as Investing, Budgeting, Debt Management, Retirement Planning, and Emergency Fund and mimic the style of the provided scenarios.
 Output only a valid JSON array without any extra text.`;
 
