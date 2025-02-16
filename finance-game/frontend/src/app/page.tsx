@@ -6,6 +6,7 @@ import FinancialGraph from "./financeChart";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import Spinner from "./spinner";
 import groovyWalkAnimation from "./groovyWalk.json";
+import Link from "next/link";
 
 type Outcome = {
   text: string;
@@ -1017,7 +1018,7 @@ const LoadingBubbles = () => {
               <p className="text-lg mb-4 text-black">
                 Final Capital: ${capital.toFixed(2)}
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-4 mb-4">
                 <button
                   onClick={() => resetGame()}
                   className="flex-1 bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
@@ -1031,6 +1032,12 @@ const LoadingBubbles = () => {
                   {showAnalysis ? "Update Analysis" : "Get Financial Analysis"}
                 </button>
               </div>
+              <Link 
+                href="/fire-calculator"
+                className="block w-full text-center bg-green-600 text-white py-2 rounded-md hover:bg-green-700 mb-4"
+              >
+                Financial Planning Tools
+              </Link>
               {renderHistoryAndGraph()}
             </div>
           ) : capital === 0 ? (
